@@ -29,7 +29,7 @@ void SSHWrapper::clearSession()
     }
 }
 
-bool SSHWrapper::connect(const QString &user, const QString& host, const quint32& port)
+bool SSHWrapper::connect(const QString &user, const QString& host, const quint16& port)
 {
     session = ssh_new();
     if (session == NULL)

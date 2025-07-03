@@ -28,7 +28,7 @@ public:
     void clearSession();
 
     // Options
-    bool connect(const QString& user, const QString& host, const quint32& port);
+    bool connect(const QString& user, const QString& host, const quint16& port);
 
     ~SSHWrapper();
 private:
