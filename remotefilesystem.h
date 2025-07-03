@@ -11,6 +11,10 @@ struct FileNode {
     QList<FileNode*> children;
 
     ~FileNode() {
+        clearChildren();
+    }
+
+    void clearChildren() {
         qDeleteAll(children);
         children.clear();
     }
@@ -39,20 +43,26 @@ public:
 signals:
     void request_list_dir(const QString &directory);
 public slots:
-    void handle_sftp_entry(const SFTPEntry &entry);
-    void handle_item_expanded(const QModelIndex &index);
+    void onSftpEntriesListed(const QList<SFTPEntry> &entries, const QString &directory);
+    void onItemExpanded(const QModelIndex &index);
+
+    void ssh_connected(const QString &directory);
 
 private:
     FileNode* rootNode;
+    QSet<QString> preLoadQueue;
+
     QIcon dirIcon;
     QIcon fileIcon;
+
 
     QModelIndex parent(const FileNode &node) const;
     QString permissionsToString(quint32 mode) const;
 
+
     FileNode* findOrCreateNode(const QString &path, bool create=false);
     FileNode* nodeFromIndex(const QModelIndex &index) const;
-    QModelIndex indexForNode(FileNode* node) const;
+    QModelIndex indexFromNode(FileNode* node) const;
     void clearModel();
 };
 #endif // REMOTEFILESYSTEM_H

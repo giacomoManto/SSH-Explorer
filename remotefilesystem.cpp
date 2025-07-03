@@ -17,8 +17,8 @@ RemoteFileSystem::RemoteFileSystem(QObject *parent)
 
     dirIcon =  QApplication::style()->standardIcon(QStyle::SP_DirIcon);
     fileIcon= QApplication::style()->standardIcon(QStyle::SP_FileIcon);
-
 }
+
 RemoteFileSystem::~RemoteFileSystem()
 {
     clearModel();
@@ -118,21 +118,74 @@ QVariant RemoteFileSystem::headerData(int section, Qt::Orientation orientation, 
 }
 
 // Pub Slots
-void RemoteFileSystem::handle_sftp_entry(const SFTPEntry &entry)
-{
-    qDebug() << "Handling entry: " << entry.name;
-    FileNode* entryNode = findOrCreateNode(entry.path, true);
-    entryNode->entry = entry;
-    QModelIndex entryIndex = indexForNode(entryNode);
-    emit dataChanged(entryIndex, entryIndex);
-}
+    void RemoteFileSystem::onSftpEntriesListed(const QList<SFTPEntry> &entries, const QString &directory)
+    {
+        qDebug() << "Handling entries under: " << directory;
+        bool preLoad = false;
+        if (preLoadQueue.contains(directory))
+        {
+            preLoad = true;
+            preLoadQueue.remove(directory);
+            qDebug() << "Preloading " << directory;
+        }
 
-void RemoteFileSystem::handle_item_expanded(const QModelIndex &index)
+
+        FileNode* directoryNode = findOrCreateNode(directory, true);
+        QModelIndex directoryIndex = indexFromNode(directoryNode);
+
+        QHash<QString, SFTPEntry> incomingMap;
+        for (const SFTPEntry &entry : entries) {
+            incomingMap.insert(entry.name, entry);
+            if (preLoad && entry.isDirectory)
+            {
+                emit request_list_dir(entry.path);
+            }
+        }
+
+        QList<FileNode*> toRemove;
+
+        for (FileNode* child : directoryNode->children) {
+            if (incomingMap.contains(child->entry.name)) {
+                child->entry = incomingMap[child->entry.name];
+                incomingMap.remove(child->entry.name);
+            } else {
+                toRemove.append(child);
+            }
+        }
+
+        if (!toRemove.isEmpty()) {
+            for (FileNode* child : toRemove) {
+                int row = directoryNode->children.indexOf(child);
+                beginRemoveRows(directoryIndex, row, row);
+                directoryNode->children.removeAt(row);
+                delete child;
+                endRemoveRows();
+            }
+        }
+
+        for (const SFTPEntry &entry : entries) {
+            if (incomingMap.contains(entry.name)) {
+                int row = directoryNode->children.size();
+                beginInsertRows(directoryIndex, row, row);
+                FileNode* child = new FileNode{entry, directoryNode, {}};
+                directoryNode->children.append(child);
+                endInsertRows();
+            }
+        }
+    }
+
+void RemoteFileSystem::onItemExpanded(const QModelIndex &index)
 {
     FileNode* node = nodeFromIndex(index);
+    preLoadQueue.insert(node->entry.path);
     emit request_list_dir(node->entry.path);
     qDebug() << "Requested: " << node->entry.path;
 
+}
+
+void RemoteFileSystem::ssh_connected(const QString &directory)
+{
+    emit request_list_dir(directory);
 }
 
 
@@ -199,7 +252,7 @@ FileNode* RemoteFileSystem::findOrCreateNode(const QString &path, bool create)
 
             int row = current->children.size();
 
-            beginInsertRows(indexForNode(current), row, row);
+            beginInsertRows(indexFromNode(current), row, row);
             current->children.append(child);
             current = child;
             endInsertRows();
@@ -228,7 +281,7 @@ void RemoteFileSystem::clearModel()
     rootNode->children.clear();
 }
 
-QModelIndex RemoteFileSystem::indexForNode(FileNode* node) const
+QModelIndex RemoteFileSystem::indexFromNode(FileNode* node) const
 {
     if (node == rootNode)
         return QModelIndex();

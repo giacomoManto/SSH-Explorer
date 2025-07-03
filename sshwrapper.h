@@ -28,7 +28,7 @@ public:
     void clearSession();
 
     // Options
-    bool connect(const QString& user, const QString& host);
+    bool connect(const QString& user, const QString& host, const quint32& port);
 
     ~SSHWrapper();
 private:
@@ -38,7 +38,7 @@ private:
 
 signals:
     void errorOccured(const QString &message);
-    void sftpEntryListed(const SFTPEntry &entry);
+    void sftpEntriesListed(const QList<SFTPEntry> &entries, const QString &directory);
 
 public slots:
     void sftp_list_dir(const QString &directory);

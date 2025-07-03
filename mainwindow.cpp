@@ -30,11 +30,11 @@ MainWindow::~MainWindow()
 void MainWindow::popup_connection()
 {
     QString user = QInputDialog::getText(this, "Username", "Username: ", QLineEdit::Normal);
-    QString host = QInputDialog::getText(this, "Host", "Host: ", QLineEdit::Password);
+    QString host = QInputDialog::getText(this, "Host", "Host: ", QLineEdit::Normal);
     // Set up the remote file system.
     QThread *workerThread = new QThread(this);
     SSHWrapper *wrap = new SSHWrapper();
-    wrap->connect(user, host);
+    wrap->connect(user, host, 22);
 
     wrap->moveToThread(workerThread);
 
@@ -45,11 +45,9 @@ void MainWindow::popup_connection()
     workerThread->start();
 
     QObject::connect(this, &MainWindow::test, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection); // tester
-    QObject::connect(wrap, &SSHWrapper::sftpEntryListed, &fs, &RemoteFileSystem::handle_sftp_entry, Qt::QueuedConnection);
+    QObject::connect(wrap, &SSHWrapper::sftpEntriesListed, &fs, &RemoteFileSystem::onSftpEntriesListed, Qt::QueuedConnection);
     QObject::connect(&fs, &RemoteFileSystem::request_list_dir, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection);
-    QObject::connect(ui->treeView, &QTreeView::expanded, &fs, &RemoteFileSystem::handle_item_expanded);
+    QObject::connect(ui->treeView, &QTreeView::expanded, &fs, &RemoteFileSystem::onItemExpanded);
 
     emit test("/");
-    emit test("/home/");
-    emit test("/home/" + user + "/");
 }

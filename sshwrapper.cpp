@@ -29,7 +29,7 @@ void SSHWrapper::clearSession()
     }
 }
 
-bool SSHWrapper::connect(const QString &user, const QString& host)
+bool SSHWrapper::connect(const QString &user, const QString& host, const quint32& port)
 {
     session = ssh_new();
     if (session == NULL)
@@ -41,6 +41,7 @@ bool SSHWrapper::connect(const QString &user, const QString& host)
 
     ssh_options_set(session, SSH_OPTIONS_HOST, host.toUtf8());
     ssh_options_set(session, SSH_OPTIONS_USER, user.toUtf8());
+    ssh_options_set(session, SSH_OPTIONS_PORT, &port);
     int rc = ssh_connect(session);
     if (rc != SSH_OK)
     {
@@ -100,7 +101,7 @@ void SSHWrapper::sftp_list_dir(const QString &directory)
         emit errorOccured(QString("Directory not opened: %1").arg(fixedDir));
         return;
     }
-
+    QList<SFTPEntry> entries;
     while ((attributes = sftp_readdir(sftp, dir)) != NULL)
     {
         if (strcmp(attributes->name, ".") == 0 || strcmp(attributes->name, "..") == 0)
@@ -120,8 +121,10 @@ void SSHWrapper::sftp_list_dir(const QString &directory)
         entry.mtimeString = QDateTime::fromSecsSinceEpoch(attributes->mtime).toString();
         entry.createtime = attributes->createtime;
 
-        emit sftpEntryListed(entry);
+        entries.append(entry);
+        sftp_attributes_free(attributes);
     }
+    emit sftpEntriesListed(entries, directory);
 
     if (!sftp_dir_eof(dir))
     {
