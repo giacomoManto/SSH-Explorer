@@ -4,6 +4,19 @@ ConnectionManager::ConnectionManager(QObject *parent)
     : QObject{parent}, settings(this)
 {
     loadConnections();
+    workerThread = new QThread(this);
+    wrap = new SSHWrapper(this);
+    connect(workerThread, &QThread::finished, wrap, &QObject::deleteLater);
+    wrap->moveToThread(workerThread);
+    workerThread->start();
+}
+
+ConnectionManager::~ConnectionManager()
+{
+    if (workerThread->isRunning()) {
+        workerThread->quit();
+        workerThread->wait();
+    }
 }
 
 QList<ConnectionInfo> ConnectionManager::getConnections()
@@ -51,5 +64,13 @@ void ConnectionManager::saveConnections()
         settings.setValue("port", c.port);
     }
     settings.endArray();
+}
+
+void ConnectionManager::onConnectionRequest(ConnectionInfo con)
+{
+        QObject::connect(this, &MainWindow::test, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection); // tester
+        QObject::connect(wrap, &SSHWrapper::sftpEntriesListed, &fs, &RemoteFileSystem::onSftpEntriesListed, Qt::QueuedConnection);
+        QObject::connect(&fs, &RemoteFileSystem::request_list_dir, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection);
+        QObject::connect(ui->treeView, &QTreeView::expanded, &fs, &RemoteFileSystem::onItemExpanded);
 }
 

@@ -10,7 +10,11 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     connect(ui->actionNew, &QAction::triggered, this, [this]() {
-        popup_connection_editor();
+        ConnectionInfo con = popup_connection_editor();
+        if (con.host != "")
+        {
+            emit requestConnection(con);
+        }
     });
 
     // Setup tree view
@@ -61,7 +65,9 @@ void MainWindow::populateConnectionList()
             cMenu->addAction(deleteAction);
             cMenu->setDefaultAction(connectAction);
 
-            // Placeholder for connection function
+            connect(connectAction, &QAction::triggered, this, [this, c]() {
+                emit requestConnection(c);
+            });
             connect(editAction, &QAction::triggered, this, [this, c]() {
                 this->popup_connection_editor(c.name);
                 populateConnectionList();
@@ -73,14 +79,14 @@ void MainWindow::populateConnectionList()
                     populateConnectionList();
                 }
             });
-            QAction* toDelete = ui->menuConnection->insertMenu(ui->menuConnection->actions().constFirst(), cMenu);
-            toDelete->setData("savedConnection");
+            QAction* menuAction = ui->menuConnection->insertMenu(ui->menuConnection->actions().constFirst(), cMenu);
+            menuAction->setData("savedConnection");
             qDebug() << "Connection found: " << c.name;
         }
     }
 }
 
-void MainWindow::popup_connection_editor(QString name)
+ConnectionInfo MainWindow::popup_connection_editor(QString name)
 {
     ConnectionDialog dlg;
     QString tag = "";
@@ -103,42 +109,43 @@ void MainWindow::popup_connection_editor(QString name)
     {
         cm.removeConnection(tag);
         cm.addConnection(newConnection);
+        populateConnectionList();
+        return newConnection;
     }
-
-    populateConnectionList();
+    return cm.getConnection(name);
 }
 
-void MainWindow::popup_connection()
-{
-    // Set up the remote file system.
-    QThread *workerThread = new QThread(this);
-    SSHWrapper *wrap = new SSHWrapper();
-    ConnectionDialog dlg(this);
-    if (dlg.exec() == QDialog::Accepted)
-    {
-        ConnectionInfo newConnection;
-        newConnection.user = dlg.user();
-        newConnection.host = dlg.host();
-        newConnection.port = dlg.port();
-        newConnection.name = dlg.user() + "@" + dlg.host();
-        cm.addConnection(newConnection);
-        wrap->connect(dlg.user(), dlg.host(), dlg.port());
-    }
+// void MainWindow::popup_connection()
+// {
+//     // Set up the remote file system.
+//     QThread *workerThread = new QThread(this);
+//     SSHWrapper *wrap = new SSHWrapper();
+//     ConnectionDialog dlg(this);
+//     if (dlg.exec() == QDialog::Accepted)
+//     {
+//         ConnectionInfo newConnection;
+//         newConnection.user = dlg.user();
+//         newConnection.host = dlg.host();
+//         newConnection.port = dlg.port();
+//         newConnection.name = dlg.user() + "@" + dlg.host();
+//         cm.addConnection(newConnection);
+//         wrap->connect(dlg.user(), dlg.host(), dlg.port());
+//     }
 
-    populateConnectionList();
+//     populateConnectionList();
 
-    wrap->moveToThread(workerThread);
+//     wrap->moveToThread(workerThread);
 
-    connect(workerThread, &QThread::finished, wrap, &QObject::deleteLater);
-    connect(workerThread, &QThread::finished, workerThread, &QObject::deleteLater);
-    connect(this, &QObject::destroyed, workerThread, &QObject::deleteLater);
+//     connect(workerThread, &QThread::finished, wrap, &QObject::deleteLater);
+//     connect(workerThread, &QThread::finished, workerThread, &QObject::deleteLater);
+//     connect(this, &QObject::destroyed, workerThread, &QObject::deleteLater);
 
-    workerThread->start();
+//     workerThread->start();
 
-    QObject::connect(this, &MainWindow::test, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection); // tester
-    QObject::connect(wrap, &SSHWrapper::sftpEntriesListed, &fs, &RemoteFileSystem::onSftpEntriesListed, Qt::QueuedConnection);
-    QObject::connect(&fs, &RemoteFileSystem::request_list_dir, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection);
-    QObject::connect(ui->treeView, &QTreeView::expanded, &fs, &RemoteFileSystem::onItemExpanded);
+//     QObject::connect(this, &MainWindow::test, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection); // tester
+//     QObject::connect(wrap, &SSHWrapper::sftpEntriesListed, &fs, &RemoteFileSystem::onSftpEntriesListed, Qt::QueuedConnection);
+//     QObject::connect(&fs, &RemoteFileSystem::request_list_dir, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection);
+//     QObject::connect(ui->treeView, &QTreeView::expanded, &fs, &RemoteFileSystem::onItemExpanded);
 
-    emit test("/");
-}
+//     emit test("/");
+// }

@@ -1,16 +1,44 @@
 #include "sshwrapper.h"
 #include <QDateTime>
 
+
 SSHWrapper::SSHWrapper(QObject *parent)
     : QObject{parent}
 {
     session = nullptr;
     sftp = nullptr;
+    statusTimer = new QTimer(this);
+    connect(statusTimer, &QTimer::timeout, this, &SSHWrapper::checkConnection);
+    statusTimer->start(500);
 }
 
 SSHWrapper::~SSHWrapper()
 {
+    statusTimer->stop();
     this->clearSession();
+}
+
+void SSHWrapper::checkConnection()
+{
+    qDebug() << "Checking connection";
+    if (!session)
+    {
+        emit connectionStatus(false);
+        return;
+    }
+    if (!ssh_is_connected(session))
+    {
+        emit connectionStatus(false);
+        return;
+    }
+
+    // Send SSH keepalive packet
+    int rc = ssh_send_ignore(session, "keepalive");
+    if (rc != SSH_OK) {
+        emit connectionStatus(false);
+        return;
+    }
+    emit connectionStatus(true);
 }
 
 void SSHWrapper::clearSession()
@@ -29,14 +57,16 @@ void SSHWrapper::clearSession()
     }
 }
 
-bool SSHWrapper::connect(const QString &user, const QString& host, const quint16& port)
+
+void SSHWrapper::connectSession(const QString &user, const QString& host, const quint16& port)
 {
+    clearSession(); // Get rid of the old in favor of the new
     session = ssh_new();
     if (session == NULL)
     {
         emit errorOccured("Failed to allocate SSH session.");
         clearSession();
-        return false;
+        return;
     }
 
     ssh_options_set(session, SSH_OPTIONS_HOST, host.toUtf8());
@@ -46,12 +76,12 @@ bool SSHWrapper::connect(const QString &user, const QString& host, const quint16
     if (rc != SSH_OK)
     {
         emit errorOccured(QString("Error connecting ssh: %1").arg(ssh_get_error(session)));
-        return false;
+        return;
     }
     if (!verify_knownhost())
     {
         clearSession();
-        return false;
+        return;
     }
     rc = ssh_userauth_publickey_auto(session, NULL, NULL);
     if (rc != SSH_AUTH_SUCCESS)
@@ -62,7 +92,7 @@ bool SSHWrapper::connect(const QString &user, const QString& host, const quint16
         rc = ssh_userauth_password(session, user.toUtf8().constData(), password.toUtf8().constData());
         if (rc != SSH_AUTH_SUCCESS)
         {
-            return false;
+            return;
         }
     }
 
@@ -72,7 +102,7 @@ bool SSHWrapper::connect(const QString &user, const QString& host, const quint16
         emit errorOccured("failed to allocate SFTP session.");
         qDebug("failed to allocate SFTP session.");
         clearSession();
-        return false;
+        return;
     }
 
     rc = sftp_init(sftp);
@@ -81,9 +111,9 @@ bool SSHWrapper::connect(const QString &user, const QString& host, const quint16
         emit errorOccured(QString("Error initializing sftp: %1").arg(sftp_get_error(sftp)));
         qDebug() << QString("Error initializing sftp: %1").arg(sftp_get_error(sftp));
         clearSession();
-        return false;
+        return;
     }
-    return true;
+    return;
 }
 
 void SSHWrapper::sftp_list_dir(const QString &directory)

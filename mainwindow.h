@@ -20,11 +20,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
-public slots:
-    void popup_connection();
-    void popup_connection_editor(QString name = "");
-
+    ConnectionInfo popup_connection_editor(QString name = "");
 
 private:
     Ui::MainWindow *ui;
@@ -34,5 +30,6 @@ private:
     void populateConnectionList();
 signals:
     void test(const QString& testDir);
+    void requestConnection(const ConnectionInfo& con);
 };
 #endif // MAINWINDOW_H

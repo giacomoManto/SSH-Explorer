@@ -57,7 +57,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core)
 
         remotefilesystem.h remotefilesystem.cpp
         sshwrapper.h sshwrapper.cpp
-        connectionhandler.h connectionhandler.cpp
+
         connectiondialog.h connectiondialog.cpp connectiondialog.ui
         connectionmanager.h connectionmanager.cpp
     )

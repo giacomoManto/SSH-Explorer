@@ -5,6 +5,7 @@
 #include <libssh/sftp.h>
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QTimer>
 
 struct SFTPEntry {
     QString path;
@@ -27,21 +28,22 @@ public:
     explicit SSHWrapper(QObject *parent = nullptr);
     void clearSession();
 
-    // Options
-    bool connect(const QString& user, const QString& host, const quint16& port);
-
     ~SSHWrapper();
 private:
     ssh_session session;
     sftp_session sftp;
+    QTimer* statusTimer;
     bool verify_knownhost();
 
 signals:
     void errorOccured(const QString &message);
     void sftpEntriesListed(const QList<SFTPEntry> &entries, const QString &directory);
+    void connectionStatus(bool status);
 
 public slots:
     void sftp_list_dir(const QString &directory);
+    void connectSession(const QString& user, const QString& host, const quint16& port);
+    void checkConnection();
 };
 
 #endif // SSHWRAPPER_H

@@ -1,9 +1,11 @@
 #ifndef CONNECTIONMANAGER_H
 #define CONNECTIONMANAGER_H
 
+#include "sshwrapper.h"
 #include <QObject>
 #include <QMap>
 #include <QSettings>
+#include <QThread>
 
 struct ConnectionInfo{
     QString name;
@@ -17,6 +19,7 @@ class ConnectionManager : public QObject
     Q_OBJECT
 public:
     explicit ConnectionManager(QObject *parent = nullptr);
+    ~ConnectionManager();
     bool hasConnection(const QString &connName){return connections.contains(connName);}
     QList<ConnectionInfo> getConnections();
     void removeConnection(QString connection);
@@ -28,7 +31,14 @@ private:
 
     void loadConnections();
     void saveConnections();
+
+    QThread *workerThread;
+    SSHWrapper *wrap;
 signals:
+
+public slots:
+    void onConnectionRequest(ConnectionInfo con);
+
 };
 
 #endif // CONNECTIONMANAGER_H
