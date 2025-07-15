@@ -2,13 +2,15 @@
 #include "./ui_mainwindow.h"
 #include "connectiondialog.h"
 #include <QThread>
+#include <qlabel.h>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow), cm(this)
+    , ui(new Ui::MainWindow), cm(&fs, this)
 {    
     ui->setupUi(this);
 
+    // Setup the newAction;
     connect(ui->actionNew, &QAction::triggered, this, [this]() {
         ConnectionInfo con = popup_connection_editor();
         if (con.host != "")
@@ -16,6 +18,23 @@ MainWindow::MainWindow(QWidget *parent)
             emit requestConnection(con);
         }
     });
+    QLabel *connectionLabel = new QLabel();
+    ui->statusbar->addWidget(connectionLabel);
+    connect(&cm, &ConnectionManager::connectionStatus, connectionLabel, [connectionLabel](bool status){
+        if (status)
+        {
+            connectionLabel->setText("<font color='green'>&#9679;</font> Connected");
+        }
+        else
+        {
+            connectionLabel->setText("<font color='red'>&#9679;</font> Not Connected");
+
+        }
+    });
+
+    // Connect request connection to the connection manager.
+    connect(this, &MainWindow::requestConnection, &cm, &ConnectionManager::onConnectionRequest);
+    QObject::connect(ui->treeView, &QTreeView::expanded, &fs, &RemoteFileSystem::onItemExpanded);
 
     // Setup tree view
     QTreeView* tree =  ui->treeView;
@@ -114,38 +133,3 @@ ConnectionInfo MainWindow::popup_connection_editor(QString name)
     }
     return cm.getConnection(name);
 }
-
-// void MainWindow::popup_connection()
-// {
-//     // Set up the remote file system.
-//     QThread *workerThread = new QThread(this);
-//     SSHWrapper *wrap = new SSHWrapper();
-//     ConnectionDialog dlg(this);
-//     if (dlg.exec() == QDialog::Accepted)
-//     {
-//         ConnectionInfo newConnection;
-//         newConnection.user = dlg.user();
-//         newConnection.host = dlg.host();
-//         newConnection.port = dlg.port();
-//         newConnection.name = dlg.user() + "@" + dlg.host();
-//         cm.addConnection(newConnection);
-//         wrap->connect(dlg.user(), dlg.host(), dlg.port());
-//     }
-
-//     populateConnectionList();
-
-//     wrap->moveToThread(workerThread);
-
-//     connect(workerThread, &QThread::finished, wrap, &QObject::deleteLater);
-//     connect(workerThread, &QThread::finished, workerThread, &QObject::deleteLater);
-//     connect(this, &QObject::destroyed, workerThread, &QObject::deleteLater);
-
-//     workerThread->start();
-
-//     QObject::connect(this, &MainWindow::test, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection); // tester
-//     QObject::connect(wrap, &SSHWrapper::sftpEntriesListed, &fs, &RemoteFileSystem::onSftpEntriesListed, Qt::QueuedConnection);
-//     QObject::connect(&fs, &RemoteFileSystem::request_list_dir, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection);
-//     QObject::connect(ui->treeView, &QTreeView::expanded, &fs, &RemoteFileSystem::onItemExpanded);
-
-//     emit test("/");
-// }

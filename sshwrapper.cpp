@@ -20,7 +20,6 @@ SSHWrapper::~SSHWrapper()
 
 void SSHWrapper::checkConnection()
 {
-    qDebug() << "Checking connection";
     if (!session)
     {
         emit connectionStatus(false);
@@ -38,7 +37,8 @@ void SSHWrapper::checkConnection()
         emit connectionStatus(false);
         return;
     }
-    emit connectionStatus(true);
+    emit connectionStatus(true, !sessionSeen);
+    sessionSeen = true;
 }
 
 void SSHWrapper::clearSession()
@@ -55,6 +55,7 @@ void SSHWrapper::clearSession()
         }
         ssh_free(session);
     }
+    sessionSeen = false;
 }
 
 
@@ -62,6 +63,7 @@ void SSHWrapper::connectSession(const QString &user, const QString& host, const 
 {
     clearSession(); // Get rid of the old in favor of the new
     session = ssh_new();
+    qDebug() << "SSHWrapper connection : " << user << " " << host << " " << port;
     if (session == NULL)
     {
         emit errorOccured("Failed to allocate SSH session.");
@@ -167,11 +169,10 @@ void SSHWrapper::sftp_list_dir(const QString &directory)
     if (rc != SSH_OK)
     {
         qDebug("Can't close directory: %s",
-                ssh_get_error(session));
+               ssh_get_error(session));
         return;
     }
 }
-
 bool SSHWrapper::verify_knownhost()
 {
     enum ssh_known_hosts_e state;

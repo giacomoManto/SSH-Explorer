@@ -46,7 +46,7 @@ public slots:
     void onSftpEntriesListed(const QList<SFTPEntry> &entries, const QString &directory);
     void onItemExpanded(const QModelIndex &index);
 
-    void ssh_connected(const QString &directory);
+    void onSSHConnected();
 
 private:
     FileNode* rootNode;

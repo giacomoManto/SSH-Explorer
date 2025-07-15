@@ -1,14 +1,24 @@
 #include "connectionmanager.h"
 
-ConnectionManager::ConnectionManager(QObject *parent)
+ConnectionManager::ConnectionManager(RemoteFileSystem *fs, QObject *parent)
     : QObject{parent}, settings(this)
 {
     loadConnections();
     workerThread = new QThread(this);
-    wrap = new SSHWrapper(this);
+    wrap = new SSHWrapper();
     connect(workerThread, &QThread::finished, wrap, &QObject::deleteLater);
     wrap->moveToThread(workerThread);
     workerThread->start();
+
+    connect(this, &ConnectionManager::requestConnection, wrap, &SSHWrapper::connectSession);
+    connect(this, &ConnectionManager::requestDir, wrap, &SSHWrapper::sftp_list_dir);
+    connect(wrap, &SSHWrapper::connectionStatus, this, &ConnectionManager::onConnectionStatus);
+
+    // Conect the file system to the SSH Session Wrapper
+    connect(fs, &RemoteFileSystem::request_list_dir, wrap, &SSHWrapper::sftp_list_dir);
+    connect(wrap, &SSHWrapper::sftpEntriesListed, fs, &RemoteFileSystem::onSftpEntriesListed);
+
+    connect(this, &ConnectionManager::firstConnection, fs, &RemoteFileSystem::onSSHConnected);
 }
 
 ConnectionManager::~ConnectionManager()
@@ -34,7 +44,6 @@ void ConnectionManager::addConnection(ConnectionInfo connection)
     connections.insert(connection.name, connection);
     saveConnections();
 }
-
 
 void ConnectionManager::loadConnections()
 {
@@ -68,9 +77,16 @@ void ConnectionManager::saveConnections()
 
 void ConnectionManager::onConnectionRequest(ConnectionInfo con)
 {
-        QObject::connect(this, &MainWindow::test, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection); // tester
-        QObject::connect(wrap, &SSHWrapper::sftpEntriesListed, &fs, &RemoteFileSystem::onSftpEntriesListed, Qt::QueuedConnection);
-        QObject::connect(&fs, &RemoteFileSystem::request_list_dir, wrap, &SSHWrapper::sftp_list_dir, Qt::QueuedConnection);
-        QObject::connect(ui->treeView, &QTreeView::expanded, &fs, &RemoteFileSystem::onItemExpanded);
+    qDebug() << "Connection request for: " << con.name;
+    emit requestConnection(con.user, con.host, con.port);
+}
+
+void ConnectionManager::onConnectionStatus(bool status, bool newConnection)
+{
+    emit connectionStatus(status);
+    if (status && newConnection)
+    {
+        emit firstConnection();
+    }
 }
 

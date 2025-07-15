@@ -22,11 +22,11 @@
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QGridLayout" name="gridLayout">
       <property name="sizeConstraint">
        <enum>QLayout::SizeConstraint::SetMaximumSize</enum>
       </property>
-      <item>
+      <item row="0" column="0">
        <widget class="QTreeView" name="treeView"/>
       </item>
      </layout>

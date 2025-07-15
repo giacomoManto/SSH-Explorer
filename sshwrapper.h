@@ -35,10 +35,11 @@ private:
     QTimer* statusTimer;
     bool verify_knownhost();
 
+    bool sessionSeen = false;
 signals:
     void errorOccured(const QString &message);
     void sftpEntriesListed(const QList<SFTPEntry> &entries, const QString &directory);
-    void connectionStatus(bool status);
+    void connectionStatus(bool status, bool newConnection = false);
 
 public slots:
     void sftp_list_dir(const QString &directory);

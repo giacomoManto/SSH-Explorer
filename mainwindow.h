@@ -29,7 +29,6 @@ private:
 
     void populateConnectionList();
 signals:
-    void test(const QString& testDir);
     void requestConnection(const ConnectionInfo& con);
 };
 #endif // MAINWINDOW_H
