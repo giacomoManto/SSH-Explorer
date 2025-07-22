@@ -29,6 +29,9 @@
       <item row="0" column="0">
        <widget class="QTreeView" name="treeView"/>
       </item>
+      <item row="0" column="1">
+       <widget class="TextEditor" name="widget" native="true"/>
+      </item>
      </layout>
     </item>
    </layout>
@@ -66,6 +69,14 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TextEditor</class>
+   <extends>QWidget</extends>
+   <header>texteditor.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

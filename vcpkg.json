@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "ssh-explorer",
+  "version-string": "0.1.0",
+  "description": "A Qt-based SSH file explorer.",
+  "dependencies": [
+    "libssh",
+    "openssl",
+    "zlib"
+  ]
+}
