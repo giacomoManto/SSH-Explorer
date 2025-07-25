@@ -42,11 +42,14 @@ signals:
     void firstConnection();
     void fileReceived(const QString& localPath, const QString& remotePath);
     void requestFile(const QString& localPath);
+    void sendFile(const QString& localPath, const QString& remotePath);
 
 public slots:
     void onConnectionRequest(ConnectionInfo con);
     void onConnectionStatus(bool status, bool newConnection = false);
     void onFileRequest(QModelIndex index);
+    void onFileSave(const QString& localPath, const QString& remotePath);
+
 
 
 };

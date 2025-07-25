@@ -47,7 +47,14 @@ int TextEditor::getIndex(QString tabName)
 }
 
 void TextEditor::saveCurrentTab() {
-    // TODO: implement saving
+    TextTab* tab = qobject_cast<TextTab*>(ui->tabWidget->currentWidget());
+    if (!tab)
+    {
+        qDebug() << "Non TextTab widget in the tabWidget. Issue";
+        return;
+    }
+    tab->saveToLocal();
+    emit fileSaved(tab->getLocalPath(), tab->getRemotePath());
 }
 
 void TextEditor::closeTab(int index) {

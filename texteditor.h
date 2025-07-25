@@ -16,7 +16,7 @@ public:
     ~TextEditor();
 
 signals:
-    void fileSaved(const QString &localFilePath);
+    void fileSaved(const QString &localFilePath, const QString &remoteFilePath);
     void fileClosed(const QString &localFilePath);
 
 public slots:

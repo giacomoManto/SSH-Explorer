@@ -57,6 +57,7 @@ public slots:
     void sftp_list_dir(const QString &directory);
     void connectSession(const QString& user, const QString& host, const quint16& port);
     void onRequestFile(const QString& remotePath);
+    void onSendFile(const QString& localPath, const QString& remotePath);
     void checkConnection();
 };
 

@@ -364,3 +364,67 @@ void SSHWrapper::onRequestFile(const QString& remotePath)
     emit fileReceived(localPath, remotePath);
 }
 
+void SSHWrapper::onSendFile(const QString& localPath, const QString& remotePath)
+{
+    QFileInfo localFileInfo(localPath);
+    QFile localFile(localPath);
+    char buffer[MAX_XFER_BUF_SIZE];
+    int nbytes = 0, nwritten = 0, rc = 0;
+
+    qDebug() << "Sending local file:" << localPath << "to remote path:" << remotePath;
+
+    if (!localFile.open(QIODevice::ReadOnly)) {
+        QString errMsg = QString("Can't open local file '%1' for reading: %2")
+        .arg(localPath, localFile.errorString());
+        qDebug() << errMsg;
+        emit errorOccured(errMsg);
+        return;
+    }
+
+    int access_type = O_WRONLY | O_CREAT | O_TRUNC;
+    sftp_file file = sftp_open(sftp, remotePath.toUtf8().constData(), access_type, 0);
+    if (!file) {
+        QString errMsg = QString("Can't open remote file '%1' for writing: %2")
+        .arg(remotePath, ssh_get_error(session));
+        qDebug() << errMsg;
+        emit errorOccured(errMsg);
+        localFile.close();
+        return;
+    }
+
+    while (!localFile.atEnd()) {
+        nbytes = localFile.read(buffer, sizeof(buffer));
+        if (nbytes < 0) {
+            QString errMsg = QString("Error reading local file '%1': %2")
+            .arg(localPath, localFile.errorString());
+            qDebug() << errMsg;
+            emit errorOccured(errMsg);
+            sftp_close(file);
+            localFile.close();
+            return;
+        }
+
+        nwritten = sftp_write(file, buffer, nbytes);
+        if (nwritten != nbytes) {
+            QString errMsg = QString("Error writing to remote file '%1': %2")
+            .arg(remotePath, ssh_get_error(session));
+            qDebug() << errMsg;
+            emit errorOccured(errMsg);
+            sftp_close(file);
+            localFile.close();
+            return;
+        }
+    }
+
+    rc = sftp_close(file);
+    if (rc != SSH_OK) {
+        QString errMsg = QString("Can't close remote file '%1': %2")
+        .arg(remotePath, ssh_get_error(session));
+        qDebug() << errMsg;
+        emit errorOccured(errMsg);
+    }
+
+    localFile.close();
+
+    qDebug() << "Successfully uploaded " << localPath << " to " << remotePath;
+}

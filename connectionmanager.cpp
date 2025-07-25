@@ -15,6 +15,7 @@ ConnectionManager::ConnectionManager(RemoteFileSystem *fs, QObject *parent)
     connect(wrap, &SSHWrapper::connectionStatus, this, &ConnectionManager::onConnectionStatus);
     connect(this, &ConnectionManager::requestFile, wrap, &SSHWrapper::onRequestFile);
     connect(wrap, &SSHWrapper::fileReceived, this, &ConnectionManager::fileReceived);
+    connect(this, &ConnectionManager::sendFile, wrap, &SSHWrapper::onSendFile);
 
     // Conect the file system to the SSH Session Wrapper
     connect(fs, &RemoteFileSystem::request_list_dir, wrap, &SSHWrapper::sftp_list_dir);
@@ -108,4 +109,10 @@ void ConnectionManager::onFileRequest(QModelIndex index)
     }
     emit requestFile(node->entry.path);
 }
+
+void ConnectionManager::onFileSave(const QString& localPath, const QString& remotePath)
+{
+    emit sendFile(localPath, remotePath);
+}
+
 

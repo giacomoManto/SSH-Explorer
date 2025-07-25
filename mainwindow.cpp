@@ -39,6 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Text Editor connections with connection manager
     connect(&cm, &ConnectionManager::fileReceived, ui->textEditor, &TextEditor::openFile);
+    connect(ui->textEditor, &TextEditor::fileSaved, &cm, &ConnectionManager::onFileSave);
 
     // Setup tree view
     QTreeView* tree =  ui->treeView;
