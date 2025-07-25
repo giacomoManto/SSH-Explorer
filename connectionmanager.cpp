@@ -94,7 +94,7 @@ void ConnectionManager::onConnectionStatus(bool status, bool newConnection)
 
 void ConnectionManager::onFileRequest(QModelIndex index)
 {
-    constexpr qint64 MAX_DOWNLOAD_SIZE = 100 * 1024 * 1024;
+    constexpr qint64 MAX_DOWNLOAD_SIZE = 10 * 1024 * 1024;
     FileNode* node = static_cast<FileNode*>(index.internalPointer());
     if (node->entry.isDirectory)
     {
