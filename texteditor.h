@@ -15,30 +15,24 @@ public:
     explicit TextEditor(QWidget *parent = nullptr);
     ~TextEditor();
 
-    // Open a local file in a new tab
-    void openFile(const QString &localFilePath);
-
 signals:
-    // Emitted when user saves a file — you can hook this to trigger upload to server
     void fileSaved(const QString &localFilePath);
-    // Emitted when a tab/document is closed
     void fileClosed(const QString &localFilePath);
 
+public slots:
+    void openFile(const QString& localPath, const QString& remotePath);
+
 private slots:
-    void saveCurrentFile();
-    void closeCurrentTab(int index);
+    void saveCurrentTab();
+    void closeTab(int index);
 
 private:
     Ui::TextEditor *ui;
 
-    struct TabData {
-        QString filePath;
-    };
-
-    // Map tab index to file path
-    QMap<int, TabData> tabs;
+    QVector<QString> tabNames;
 
     bool saveTab(int index);
+    int getIndex(QString tabName);
 };
 
 #endif // TEXTEDITOR_H

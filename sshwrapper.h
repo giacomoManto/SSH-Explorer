@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QTimer>
+#include <fcntl.h>
 
 #define S_IRUSR 0400
 #define S_IWUSR 0200
@@ -50,10 +51,12 @@ signals:
     void errorOccured(const QString &message);
     void sftpEntriesListed(const QList<SFTPEntry> &entries, const QString &directory);
     void connectionStatus(bool status, bool newConnection = false);
+    void fileReceived(const QString& localPath, const QString& remotePath);
 
 public slots:
     void sftp_list_dir(const QString &directory);
     void connectSession(const QString& user, const QString& host, const quint16& port);
+    void onRequestFile(const QString& remotePath);
     void checkConnection();
 };
 

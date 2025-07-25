@@ -40,9 +40,14 @@ signals:
     void requestDir(const QString &directory);
     void connectionStatus(bool status);
     void firstConnection();
+    void fileReceived(const QString& localPath, const QString& remotePath);
+    void requestFile(const QString& localPath);
+
 public slots:
     void onConnectionRequest(ConnectionInfo con);
     void onConnectionStatus(bool status, bool newConnection = false);
+    void onFileRequest(QModelIndex index);
+
 
 };
 

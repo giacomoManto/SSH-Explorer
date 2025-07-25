@@ -1,5 +1,11 @@
 #include "sshwrapper.h"
 #include <QDateTime>
+#include<QStandardPaths>
+#include <QFile>
+#include <QFileInfo>
+#include <QDir>
+
+#define MAX_XFER_BUF_SIZE 16384
 
 
 SSHWrapper::SSHWrapper(QObject *parent)
@@ -270,3 +276,91 @@ bool SSHWrapper::verify_knownhost()
     ssh_clean_pubkey_hash(&hash);
     return true;
 }
+
+void SSHWrapper::onRequestFile(const QString& remotePath)
+{
+    QFileInfo remoteFile(remotePath);
+    QString tempPath = QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/SSHExplorer";
+
+    qDebug() << "Requesting remote file:" << remotePath;
+
+    sftp_file file = nullptr;
+    int fd = -1;
+    char buffer[MAX_XFER_BUF_SIZE];
+    int nbytes = 0, nwritten = 0, rc = 0;
+
+    // Open remote file for reading
+    file = sftp_open(sftp, remotePath.toUtf8().constData(), O_RDONLY, 0);
+    if (!file) {
+        QString errMsg = QString("Can't open remote file '%1' for reading: %2")
+        .arg(remotePath, ssh_get_error(session));
+        qDebug() << errMsg;
+        emit errorOccured(errMsg);
+        return;
+    }
+
+    QString localFilename = "local_" + remoteFile.fileName();
+    QString localPath = tempPath + "/" + localFilename;
+    QFile localFile(localPath);
+    QFileInfo fileInfo(localFile);
+    QDir dir;
+    if (!dir.mkpath(fileInfo.absolutePath())) {
+        qWarning() << "Failed to create directory:" << fileInfo.absolutePath();
+    }
+    if (!localFile.open(QIODevice::Truncate | QIODevice::WriteOnly | QIODevice::Text))
+    {
+        QString errMsg = QString("Can't open file '%1' for writing: %2").arg(localPath, localFile.errorString());
+        qDebug() << errMsg;
+        emit errorOccured(errMsg);
+        return;
+    }
+
+    while (true) {
+        nbytes = sftp_read(file, buffer, sizeof(buffer));
+        if (nbytes == 0) {
+            // EOF
+            break;
+        } else if (nbytes < 0) {
+            QString errMsg = QString("Error reading remote file '%1': %2")
+            .arg(remotePath, ssh_get_error(session));
+            qDebug() << errMsg;
+            emit errorOccured(errMsg);
+            sftp_close(file);
+            localFile.close();
+            if (!localFile.remove())
+            {
+                qDebug() << QString("Failed to remove file: '%1'").arg(localPath);
+            }
+            return;
+        }
+
+        nwritten = localFile.write(buffer, nbytes);
+        if (nwritten != nbytes) {
+            QString errMsg = QString("Error writing to local file '%1': %2")
+            .arg(localPath, strerror(errno));
+            qDebug() << errMsg;
+            emit errorOccured(errMsg);
+            sftp_close(file);
+            localFile.close();
+            if (!localFile.remove())
+            {
+                qDebug() << QString("Failed to remove file: '%1'").arg(localPath);
+            }
+            return;
+        }
+    }
+
+    rc = sftp_close(file);
+    if (rc != SSH_OK) {
+        QString errMsg = QString("Can't close remote file '%1': %2")
+        .arg(remotePath, ssh_get_error(session));
+        qDebug() << errMsg;
+        emit errorOccured(errMsg);
+    }
+
+    localFile.close();
+
+    qDebug() << "Successfully downloaded " << remotePath << " to " << localPath;
+    emit fileReceived(localPath, remotePath);
+}
+

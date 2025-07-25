@@ -34,7 +34,11 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Connect request connection to the connection manager.
     connect(this, &MainWindow::requestConnection, &cm, &ConnectionManager::onConnectionRequest);
-    QObject::connect(ui->treeView, &QTreeView::expanded, &fs, &RemoteFileSystem::onItemExpanded);
+    connect(ui->treeView, &QTreeView::expanded, &fs, &RemoteFileSystem::onItemExpanded);
+    connect(ui->treeView, &QTreeView::doubleClicked, &cm, &ConnectionManager::onFileRequest);
+
+    // Text Editor connections with connection manager
+    connect(&cm, &ConnectionManager::fileReceived, ui->textEditor, &TextEditor::openFile);
 
     // Setup tree view
     QTreeView* tree =  ui->treeView;
